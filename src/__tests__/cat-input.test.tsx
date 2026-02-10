@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 import { useAppStore } from "../store/useAppStore";
 
 // Reset store state before each test
 beforeEach(() => {
+  vi.useFakeTimers({
+    shouldAdvanceTime: true,
+    toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+  });
   useAppStore.setState({
     catMood: "idle",
     playbackState: "idle",
@@ -19,9 +23,13 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("Cat click → Input bubble", () => {
   it("should show InputBubble when cat is clicked", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     // Input bubble should NOT be visible initially
@@ -31,32 +39,38 @@ describe("Cat click → Input bubble", () => {
     const cat = screen.getByTitle(/Right-click for menu/);
     await user.click(cat);
 
+    // Advance past the 250ms single-click delay in CatCharacter
+    act(() => { vi.advanceTimersByTime(300); });
+
     // Input bubble SHOULD now be visible
     expect(screen.getByPlaceholderText(/Type something to say/)).toBeInTheDocument();
   });
 
   it("should hide InputBubble when cat is clicked again", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     // First click: show input (cat is idle → title is "Click to type...")
     const cat = screen.getByTitle(/Right-click for menu/);
     await user.click(cat);
+    act(() => { vi.advanceTimersByTime(300); });
     expect(screen.getByPlaceholderText(/Type something to say/)).toBeInTheDocument();
 
     // Second click: hide input (cat is now happy → re-query by title regex)
     const catAgain = screen.getByTitle(/Right-click for menu/);
     await user.click(catAgain);
+    act(() => { vi.advanceTimersByTime(300); });
     expect(screen.queryByPlaceholderText(/Type something to say/)).not.toBeInTheDocument();
   });
 
   it("should not show InputBubble when cat is sleeping", async () => {
     useAppStore.setState({ catMood: "sleeping" });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     const cat = screen.getByTitle("Right-click to wake up");
     await user.click(cat);
+    act(() => { vi.advanceTimersByTime(300); });
 
     // Sleeping cat click should still toggle input (current behavior)
     // This test documents the expected behavior
@@ -70,11 +84,12 @@ describe("Cat click → Input bubble", () => {
       showSpeech: true,
       speechText: "Hello",
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     const cat = screen.getByTitle("Click to stop · Right-click for menu");
     await user.click(cat);
+    act(() => { vi.advanceTimersByTime(300); });
 
     // Should stop, not toggle input
     expect(useAppStore.getState().showInput).toBe(false);
@@ -84,7 +99,7 @@ describe("Cat click → Input bubble", () => {
 describe("InputBubble interaction", () => {
   it("should allow typing and submitting text", async () => {
     useAppStore.setState({ showInput: true });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     const textarea = screen.getByPlaceholderText(/Type something to say/);
@@ -96,7 +111,7 @@ describe("InputBubble interaction", () => {
 
   it("should close InputBubble when Escape is pressed", async () => {
     useAppStore.setState({ showInput: true });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     const textarea = screen.getByPlaceholderText(/Type something to say/);
@@ -107,7 +122,7 @@ describe("InputBubble interaction", () => {
 
   it("should close InputBubble when Cancel is clicked", async () => {
     useAppStore.setState({ showInput: true });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
 
     const cancelBtn = screen.getByText("Cancel");

@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Lottie from "lottie-react";
+import { invoke } from "@tauri-apps/api";
 import { useAppStore } from "../store/useAppStore";
 import { adjustMenuPosition } from "../utils/menuPosition";
 import catIdle from "../assets/cat-idle.json";
@@ -36,6 +37,18 @@ export default function CatCharacter() {
 
   const [contextMenu, setContextMenu] = useState<ContextMenuPos | null>(null);
   const [bounce, setBounce] = useState(false);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Cancel pending single-click action
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    // Open studio window
+    invoke("open_studio").catch(console.error);
+  }, []);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -44,18 +57,27 @@ export default function CatCharacter() {
       setContextMenu(null);
       return;
     }
-    if (playbackState === "playing" || playbackState === "synthesizing") {
-      stopSpeaking();
-    } else {
-      // If idle or sleeping, trigger happy before toggling input
-      if (catMood === "idle" || catMood === "sleeping") {
-        triggerHappy();
-      }
-      toggleInput();
+
+    // Delay single-click action to distinguish from double-click
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
     }
-    // Trigger bounce animation
-    setBounce(true);
-    setTimeout(() => setBounce(false), 300);
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null;
+      if (playbackState === "playing" || playbackState === "synthesizing") {
+        stopSpeaking();
+      } else {
+        // If idle or sleeping, trigger happy before toggling input
+        if (catMood === "idle" || catMood === "sleeping") {
+          triggerHappy();
+        }
+        toggleInput();
+      }
+      // Trigger bounce animation
+      setBounce(true);
+      setTimeout(() => setBounce(false), 300);
+    }, 250);
   };
 
   // Approximate context menu size (matches CSS min-width:180px, ~5 items)
@@ -123,7 +145,7 @@ export default function CatCharacter() {
       ? "Right-click to wake up"
       : catMood === "happy"
       ? "Happy cat! · Right-click for menu"
-      : "Click to type · Right-click for menu";
+      : "Click to type · Double-click for Studio · Right-click for menu";
 
   // Build CSS class list
   const wrapperClasses = [
@@ -137,6 +159,7 @@ export default function CatCharacter() {
     <>
       <div
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}

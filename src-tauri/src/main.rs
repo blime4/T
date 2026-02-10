@@ -126,6 +126,32 @@ async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, St
     Ok(new_state)
 }
 
+#[tauri::command]
+async fn open_studio(app_handle: AppHandle) -> Result<(), String> {
+    // If studio window already exists, just show & focus it
+    if let Some(window) = app_handle.get_window("studio") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    } else {
+        // Create a new studio window
+        let _window = WindowBuilder::new(
+            &app_handle,
+            "studio",
+            WindowUrl::App("index.html".into()),
+        )
+        .title("Neko TTS — Studio")
+        .inner_size(1200.0, 800.0)
+        .min_inner_size(900.0, 600.0)
+        .resizable(true)
+        .decorations(false)
+        .always_on_top(false)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 // ─── System Tray ──────────────────────────────────────────────────
 
 fn create_system_tray() -> SystemTray {
@@ -356,6 +382,7 @@ fn main() {
             get_tts_config,
             update_tts_config,
             toggle_clipboard_monitor,
+            open_studio,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
