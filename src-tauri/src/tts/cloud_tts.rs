@@ -254,3 +254,137 @@ fn quick_xml_escape(s: &str) -> String {
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── quick_xml_escape ──────────────────────────────────────────
+
+    #[test]
+    fn xml_escape_ampersand() {
+        assert_eq!(quick_xml_escape("A & B"), "A &amp; B");
+    }
+
+    #[test]
+    fn xml_escape_angle_brackets() {
+        assert_eq!(quick_xml_escape("<hello>"), "&lt;hello&gt;");
+    }
+
+    #[test]
+    fn xml_escape_quotes() {
+        assert_eq!(quick_xml_escape(r#"say "hi""#), "say &quot;hi&quot;");
+        assert_eq!(quick_xml_escape("it's"), "it&apos;s");
+    }
+
+    #[test]
+    fn xml_escape_combined() {
+        assert_eq!(
+            quick_xml_escape(r#"A & B < C > D "E" F'G"#),
+            "A &amp; B &lt; C &gt; D &quot;E&quot; F&apos;G"
+        );
+    }
+
+    #[test]
+    fn xml_escape_no_special_chars() {
+        assert_eq!(quick_xml_escape("Hello world 123"), "Hello world 123");
+    }
+
+    #[test]
+    fn xml_escape_empty_string() {
+        assert_eq!(quick_xml_escape(""), "");
+    }
+
+    #[test]
+    fn xml_escape_unicode() {
+        assert_eq!(quick_xml_escape("你好 & 世界"), "你好 &amp; 世界");
+    }
+
+    // ── CloudTtsEngine construction ───────────────────────────────
+
+    #[test]
+    fn cloud_engine_default_voice_openai() {
+        let engine = CloudTtsEngine::new(CloudProvider::OpenAI, "key".into(), None, None);
+        assert_eq!(engine.voice, "alloy");
+        assert_eq!(engine.name(), "OpenAI TTS");
+    }
+
+    #[test]
+    fn cloud_engine_default_voice_azure() {
+        let engine = CloudTtsEngine::new(CloudProvider::Azure, "key".into(), None, None);
+        assert_eq!(engine.voice, "en-US-JennyNeural");
+        assert_eq!(engine.name(), "Azure TTS");
+    }
+
+    #[test]
+    fn cloud_engine_default_voice_google() {
+        let engine = CloudTtsEngine::new(CloudProvider::Google, "key".into(), None, None);
+        assert_eq!(engine.voice, "en-US-Standard-C");
+        assert_eq!(engine.name(), "Google TTS");
+    }
+
+    #[test]
+    fn cloud_engine_custom_voice() {
+        let engine = CloudTtsEngine::new(
+            CloudProvider::OpenAI,
+            "key".into(),
+            Some("nova".to_string()),
+            None,
+        );
+        assert_eq!(engine.voice, "nova");
+    }
+
+    #[test]
+    fn cloud_engine_custom_endpoint() {
+        let engine = CloudTtsEngine::new(
+            CloudProvider::Azure,
+            "key".into(),
+            None,
+            Some("https://custom.endpoint.com".to_string()),
+        );
+        assert_eq!(engine.endpoint.as_deref(), Some("https://custom.endpoint.com"));
+    }
+
+    // ── is_available ──────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn cloud_engine_available_with_key() {
+        let engine = CloudTtsEngine::new(CloudProvider::OpenAI, "test-key".into(), None, None);
+        assert!(engine.is_available().await);
+    }
+
+    #[tokio::test]
+    async fn cloud_engine_unavailable_without_key() {
+        let engine = CloudTtsEngine::new(CloudProvider::OpenAI, "".into(), None, None);
+        assert!(!engine.is_available().await);
+    }
+
+    // ── list_voices ───────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn cloud_engine_list_openai_voices() {
+        let engine = CloudTtsEngine::new(CloudProvider::OpenAI, "key".into(), None, None);
+        let voices = engine.list_voices().await.unwrap();
+        assert_eq!(voices.len(), 6);
+        assert!(voices.iter().any(|v| v.id == "alloy"));
+        assert!(voices.iter().any(|v| v.id == "nova"));
+        assert!(voices.iter().any(|v| v.id == "shimmer"));
+    }
+
+    #[tokio::test]
+    async fn cloud_engine_list_azure_voices() {
+        let engine = CloudTtsEngine::new(CloudProvider::Azure, "key".into(), None, None);
+        let voices = engine.list_voices().await.unwrap();
+        assert_eq!(voices.len(), 5);
+        assert!(voices.iter().any(|v| v.id == "en-US-JennyNeural"));
+        assert!(voices.iter().any(|v| v.id == "zh-CN-XiaoxiaoNeural"));
+    }
+
+    #[tokio::test]
+    async fn cloud_engine_list_google_voices() {
+        let engine = CloudTtsEngine::new(CloudProvider::Google, "key".into(), None, None);
+        let voices = engine.list_voices().await.unwrap();
+        assert_eq!(voices.len(), 4);
+        assert!(voices.iter().any(|v| v.id == "en-US-Standard-C"));
+    }
+}

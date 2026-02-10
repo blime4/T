@@ -36,6 +36,18 @@ impl PiperTtsEngine {
     pub fn set_binary(&mut self, path: &str) {
         self.piper_binary = PathBuf::from(path);
     }
+
+    /// Get the configured model path (for testing)
+    #[allow(dead_code)]
+    pub fn model_path(&self) -> Option<&PathBuf> {
+        self.model_path.as_ref()
+    }
+
+    /// Get the configured binary path (for testing)
+    #[allow(dead_code)]
+    pub fn binary_path(&self) -> &PathBuf {
+        &self.piper_binary
+    }
 }
 
 #[async_trait]
@@ -116,5 +128,123 @@ impl TtsEngine for PiperTtsEngine {
             channels: 1,
             format: "wav".to_string(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Construction ──────────────────────────────────────────────
+
+    #[test]
+    fn piper_engine_default_binary() {
+        let engine = PiperTtsEngine::new(None, None);
+        assert_eq!(engine.binary_path(), &PathBuf::from("piper"));
+        assert!(engine.model_path().is_none());
+        assert_eq!(engine.name(), "Piper TTS");
+    }
+
+    #[test]
+    fn piper_engine_custom_binary_and_model() {
+        let engine = PiperTtsEngine::new(
+            Some("/opt/piper/piper".to_string()),
+            Some("/models/en_US-lessac-medium.onnx".to_string()),
+        );
+        assert_eq!(engine.binary_path(), &PathBuf::from("/opt/piper/piper"));
+        assert_eq!(
+            engine.model_path().unwrap(),
+            &PathBuf::from("/models/en_US-lessac-medium.onnx")
+        );
+    }
+
+    // ── set_model / set_binary ────────────────────────────────────
+
+    #[test]
+    fn piper_engine_set_model() {
+        let mut engine = PiperTtsEngine::new(None, None);
+        assert!(engine.model_path().is_none());
+
+        engine.set_model("/new/model.onnx");
+        assert_eq!(engine.model_path().unwrap(), &PathBuf::from("/new/model.onnx"));
+    }
+
+    #[test]
+    fn piper_engine_set_binary() {
+        let mut engine = PiperTtsEngine::new(None, None);
+        assert_eq!(engine.binary_path(), &PathBuf::from("piper"));
+
+        engine.set_binary("/usr/local/bin/piper");
+        assert_eq!(engine.binary_path(), &PathBuf::from("/usr/local/bin/piper"));
+    }
+
+    // ── list_voices ───────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn piper_list_voices_no_model() {
+        let engine = PiperTtsEngine::new(None, None);
+        let voices = engine.list_voices().await.unwrap();
+        assert!(voices.is_empty());
+    }
+
+    #[tokio::test]
+    async fn piper_list_voices_with_model() {
+        let engine = PiperTtsEngine::new(
+            None,
+            Some("/models/en_US-lessac-medium.onnx".to_string()),
+        );
+        let voices = engine.list_voices().await.unwrap();
+        assert_eq!(voices.len(), 1);
+        assert_eq!(voices[0].name, "en_US-lessac-medium");
+        assert_eq!(voices[0].id, "/models/en_US-lessac-medium.onnx");
+        assert!(voices[0].language.is_none());
+    }
+
+    // ── synthesize error cases ────────────────────────────────────
+
+    #[tokio::test]
+    async fn piper_synthesize_no_model_configured() {
+        let engine = PiperTtsEngine::new(None, None);
+        let request = TtsRequest {
+            text: "Hello".to_string(),
+            engine: None,
+            voice: None,
+            rate: None,
+            pitch: None,
+            volume: None,
+        };
+        let result = engine.synthesize(&request).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No Piper model configured"));
+    }
+
+    #[tokio::test]
+    async fn piper_synthesize_model_not_found() {
+        let engine = PiperTtsEngine::new(
+            None,
+            Some("/nonexistent/path/model.onnx".to_string()),
+        );
+        let request = TtsRequest {
+            text: "Hello".to_string(),
+            engine: None,
+            voice: None,
+            rate: None,
+            pitch: None,
+            volume: None,
+        };
+        let result = engine.synthesize(&request).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Piper model not found"));
+    }
+
+    // ── is_available (piper binary not installed in test env) ─────
+
+    #[tokio::test]
+    async fn piper_not_available_when_binary_missing() {
+        let engine = PiperTtsEngine::new(
+            Some("/nonexistent/piper_binary_xyz".to_string()),
+            None,
+        );
+        assert!(!engine.is_available().await);
     }
 }
