@@ -166,7 +166,10 @@ mod tests {
         assert!(engine.model_path().is_none());
 
         engine.set_model("/new/model.onnx");
-        assert_eq!(engine.model_path().unwrap(), &PathBuf::from("/new/model.onnx"));
+        assert_eq!(
+            engine.model_path().unwrap(),
+            &PathBuf::from("/new/model.onnx")
+        );
     }
 
     #[test]
@@ -189,10 +192,8 @@ mod tests {
 
     #[tokio::test]
     async fn piper_list_voices_with_model() {
-        let engine = PiperTtsEngine::new(
-            None,
-            Some("/models/en_US-lessac-medium.onnx".to_string()),
-        );
+        let engine =
+            PiperTtsEngine::new(None, Some("/models/en_US-lessac-medium.onnx".to_string()));
         let voices = engine.list_voices().await.unwrap();
         assert_eq!(voices.len(), 1);
         assert_eq!(voices[0].name, "en_US-lessac-medium");
@@ -215,15 +216,15 @@ mod tests {
         };
         let result = engine.synthesize(&request).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("No Piper model configured"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No Piper model configured"));
     }
 
     #[tokio::test]
     async fn piper_synthesize_model_not_found() {
-        let engine = PiperTtsEngine::new(
-            None,
-            Some("/nonexistent/path/model.onnx".to_string()),
-        );
+        let engine = PiperTtsEngine::new(None, Some("/nonexistent/path/model.onnx".to_string()));
         let request = TtsRequest {
             text: "Hello".to_string(),
             engine: None,
@@ -234,17 +235,17 @@ mod tests {
         };
         let result = engine.synthesize(&request).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Piper model not found"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Piper model not found"));
     }
 
     // ── is_available (piper binary not installed in test env) ─────
 
     #[tokio::test]
     async fn piper_not_available_when_binary_missing() {
-        let engine = PiperTtsEngine::new(
-            Some("/nonexistent/piper_binary_xyz".to_string()),
-            None,
-        );
+        let engine = PiperTtsEngine::new(Some("/nonexistent/piper_binary_xyz".to_string()), None);
         assert!(!engine.is_available().await);
     }
 }

@@ -33,8 +33,8 @@ fn try_load_config() -> Result<TtsConfig> {
     }
     let content = fs::read_to_string(&path)
         .with_context(|| format!("Failed to read config file: {:?}", path))?;
-    let config: TtsConfig = serde_json::from_str(&content)
-        .with_context(|| "Failed to parse config JSON")?;
+    let config: TtsConfig =
+        serde_json::from_str(&content).with_context(|| "Failed to parse config JSON")?;
     Ok(config)
 }
 
@@ -45,17 +45,17 @@ pub fn save_config(config: &TtsConfig) -> Result<()> {
         fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create config directory: {:?}", parent))?;
     }
-    let json = serde_json::to_string_pretty(config)
-        .context("Failed to serialize config")?;
-    fs::write(&path, json)
-        .with_context(|| format!("Failed to write config file: {:?}", path))?;
+    let json = serde_json::to_string_pretty(config).context("Failed to serialize config")?;
+    fs::write(&path, json).with_context(|| format!("Failed to write config file: {:?}", path))?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tts::types::{CloudProvider, CloudTtsConfig, EngineType, PiperTtsConfig, SystemTtsConfig};
+    use crate::tts::types::{
+        CloudProvider, CloudTtsConfig, EngineType, PiperTtsConfig, SystemTtsConfig,
+    };
 
     #[test]
     fn config_dir_is_under_neko_tts() {
@@ -82,7 +82,9 @@ mod tests {
     fn save_and_load_config_round_trip() {
         let config = TtsConfig {
             active_engine: EngineType::Cloud,
-            system: SystemTtsConfig { voice: Some("test-voice".to_string()) },
+            system: SystemTtsConfig {
+                voice: Some("test-voice".to_string()),
+            },
             piper: PiperTtsConfig {
                 model_path: Some("/tmp/model.onnx".to_string()),
                 piper_binary: None,

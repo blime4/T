@@ -74,30 +74,15 @@ impl Default for TtsConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SystemTtsConfig {
     pub voice: Option<String>,
 }
 
-impl Default for SystemTtsConfig {
-    fn default() -> Self {
-        Self { voice: None }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PiperTtsConfig {
     pub model_path: Option<String>,
     pub piper_binary: Option<String>,
-}
-
-impl Default for PiperTtsConfig {
-    fn default() -> Self {
-        Self {
-            model_path: None,
-            piper_binary: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,16 +123,34 @@ mod tests {
 
     #[test]
     fn engine_type_serializes_to_snake_case() {
-        assert_eq!(serde_json::to_string(&EngineType::System).unwrap(), r#""system""#);
-        assert_eq!(serde_json::to_string(&EngineType::Piper).unwrap(), r#""piper""#);
-        assert_eq!(serde_json::to_string(&EngineType::Cloud).unwrap(), r#""cloud""#);
+        assert_eq!(
+            serde_json::to_string(&EngineType::System).unwrap(),
+            r#""system""#
+        );
+        assert_eq!(
+            serde_json::to_string(&EngineType::Piper).unwrap(),
+            r#""piper""#
+        );
+        assert_eq!(
+            serde_json::to_string(&EngineType::Cloud).unwrap(),
+            r#""cloud""#
+        );
     }
 
     #[test]
     fn engine_type_deserializes_from_snake_case() {
-        assert_eq!(serde_json::from_str::<EngineType>(r#""system""#).unwrap(), EngineType::System);
-        assert_eq!(serde_json::from_str::<EngineType>(r#""piper""#).unwrap(), EngineType::Piper);
-        assert_eq!(serde_json::from_str::<EngineType>(r#""cloud""#).unwrap(), EngineType::Cloud);
+        assert_eq!(
+            serde_json::from_str::<EngineType>(r#""system""#).unwrap(),
+            EngineType::System
+        );
+        assert_eq!(
+            serde_json::from_str::<EngineType>(r#""piper""#).unwrap(),
+            EngineType::Piper
+        );
+        assert_eq!(
+            serde_json::from_str::<EngineType>(r#""cloud""#).unwrap(),
+            EngineType::Cloud
+        );
     }
 
     // ── CloudProvider serialization ───────────────────────────────
@@ -155,14 +158,27 @@ mod tests {
     #[test]
     fn cloud_provider_serializes_to_snake_case() {
         // Note: serde snake_case splits on each capital, so OpenAI → "open_a_i"
-        assert_eq!(serde_json::to_string(&CloudProvider::OpenAI).unwrap(), r#""open_a_i""#);
-        assert_eq!(serde_json::to_string(&CloudProvider::Azure).unwrap(), r#""azure""#);
-        assert_eq!(serde_json::to_string(&CloudProvider::Google).unwrap(), r#""google""#);
+        assert_eq!(
+            serde_json::to_string(&CloudProvider::OpenAI).unwrap(),
+            r#""open_a_i""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CloudProvider::Azure).unwrap(),
+            r#""azure""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CloudProvider::Google).unwrap(),
+            r#""google""#
+        );
     }
 
     #[test]
     fn cloud_provider_round_trip() {
-        for provider in [CloudProvider::OpenAI, CloudProvider::Azure, CloudProvider::Google] {
+        for provider in [
+            CloudProvider::OpenAI,
+            CloudProvider::Azure,
+            CloudProvider::Google,
+        ] {
             let json = serde_json::to_string(&provider).unwrap();
             let back: CloudProvider = serde_json::from_str(&json).unwrap();
             assert_eq!(provider, back);
@@ -173,11 +189,26 @@ mod tests {
 
     #[test]
     fn playback_state_serializes_correctly() {
-        assert_eq!(serde_json::to_string(&PlaybackState::Idle).unwrap(), r#""idle""#);
-        assert_eq!(serde_json::to_string(&PlaybackState::Synthesizing).unwrap(), r#""synthesizing""#);
-        assert_eq!(serde_json::to_string(&PlaybackState::Playing).unwrap(), r#""playing""#);
-        assert_eq!(serde_json::to_string(&PlaybackState::Paused).unwrap(), r#""paused""#);
-        assert_eq!(serde_json::to_string(&PlaybackState::Error).unwrap(), r#""error""#);
+        assert_eq!(
+            serde_json::to_string(&PlaybackState::Idle).unwrap(),
+            r#""idle""#
+        );
+        assert_eq!(
+            serde_json::to_string(&PlaybackState::Synthesizing).unwrap(),
+            r#""synthesizing""#
+        );
+        assert_eq!(
+            serde_json::to_string(&PlaybackState::Playing).unwrap(),
+            r#""playing""#
+        );
+        assert_eq!(
+            serde_json::to_string(&PlaybackState::Paused).unwrap(),
+            r#""paused""#
+        );
+        assert_eq!(
+            serde_json::to_string(&PlaybackState::Error).unwrap(),
+            r#""error""#
+        );
     }
 
     // ── TtsConfig defaults ────────────────────────────────────────
@@ -202,7 +233,9 @@ mod tests {
     fn tts_config_serialization_round_trip() {
         let config = TtsConfig {
             active_engine: EngineType::Cloud,
-            system: SystemTtsConfig { voice: Some("en-us".to_string()) },
+            system: SystemTtsConfig {
+                voice: Some("en-us".to_string()),
+            },
             piper: PiperTtsConfig {
                 model_path: Some("/path/to/model.onnx".to_string()),
                 piper_binary: Some("/usr/bin/piper".to_string()),
@@ -223,7 +256,10 @@ mod tests {
 
         assert_eq!(deserialized.active_engine, EngineType::Cloud);
         assert_eq!(deserialized.system.voice.as_deref(), Some("en-us"));
-        assert_eq!(deserialized.piper.model_path.as_deref(), Some("/path/to/model.onnx"));
+        assert_eq!(
+            deserialized.piper.model_path.as_deref(),
+            Some("/path/to/model.onnx")
+        );
         assert_eq!(deserialized.cloud.provider, CloudProvider::Azure);
         assert_eq!(deserialized.cloud.api_key.as_deref(), Some("test-key-123"));
         assert_eq!(deserialized.default_rate, 1.5);

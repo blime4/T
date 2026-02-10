@@ -107,10 +107,7 @@ impl CloudTtsEngine {
             .post(endpoint)
             .header("Ocp-Apim-Subscription-Key", &self.api_key)
             .header("Content-Type", "application/ssml+xml")
-            .header(
-                "X-Microsoft-OutputFormat",
-                "riff-24khz-16bit-mono-pcm",
-            )
+            .header("X-Microsoft-OutputFormat", "riff-24khz-16bit-mono-pcm")
             .body(ssml)
             .send()
             .await?;
@@ -157,12 +154,7 @@ impl CloudTtsEngine {
             }
         });
 
-        let resp = self
-            .client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await?;
+        let resp = self.client.post(&url).json(&body).send().await?;
 
         if !resp.status().is_success() {
             let status = resp.status();
@@ -342,7 +334,10 @@ mod tests {
             None,
             Some("https://custom.endpoint.com".to_string()),
         );
-        assert_eq!(engine.endpoint.as_deref(), Some("https://custom.endpoint.com"));
+        assert_eq!(
+            engine.endpoint.as_deref(),
+            Some("https://custom.endpoint.com")
+        );
     }
 
     // ── is_available ──────────────────────────────────────────────

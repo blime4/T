@@ -44,22 +44,22 @@ impl SystemTtsEngine {
             if Self::command_exists("espeak").await {
                 return SystemBackend::Espeak;
             }
-            return SystemBackend::None;
+            SystemBackend::None
         }
 
         #[cfg(target_os = "macos")]
         {
-            return SystemBackend::Say;
+            SystemBackend::Say
         }
 
         #[cfg(target_os = "windows")]
         {
-            return SystemBackend::Sapi;
+            SystemBackend::Sapi
         }
 
         #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
         {
-            return SystemBackend::None;
+            SystemBackend::None
         }
     }
 
@@ -94,10 +94,7 @@ impl TtsEngine for SystemTtsEngine {
                     SystemBackend::Espeak => "espeak",
                     _ => unreachable!(),
                 };
-                let output = Command::new(cmd)
-                    .arg("--voices")
-                    .output()
-                    .await?;
+                let output = Command::new(cmd).arg("--voices").output().await?;
                 let text = String::from_utf8_lossy(&output.stdout);
                 let voices: Vec<VoiceInfo> = text
                     .lines()
@@ -190,11 +187,7 @@ impl TtsEngine for SystemTtsEngine {
                 };
                 // espeak outputs WAV to stdout with --stdout
                 let wpm = (175.0 * rate) as u32; // default espeak rate is ~175 wpm
-                let mut args = vec![
-                    "--stdout".to_string(),
-                    "-s".to_string(),
-                    wpm.to_string(),
-                ];
+                let mut args = vec!["--stdout".to_string(), "-s".to_string(), wpm.to_string()];
                 if let Some(ref voice) = request.voice {
                     args.push("-v".to_string());
                     args.push(voice.clone());
@@ -219,11 +212,9 @@ impl TtsEngine for SystemTtsEngine {
             #[cfg(target_os = "macos")]
             SystemBackend::Say => {
                 use tokio::fs;
-                let tmp = std::env::temp_dir().join(format!("neko_tts_{}.aiff", std::process::id()));
-                let mut args = vec![
-                    "-o".to_string(),
-                    tmp.to_string_lossy().to_string(),
-                ];
+                let tmp =
+                    std::env::temp_dir().join(format!("neko_tts_{}.aiff", std::process::id()));
+                let mut args = vec!["-o".to_string(), tmp.to_string_lossy().to_string()];
                 if let Some(ref voice) = request.voice {
                     args.push("-v".to_string());
                     args.push(voice.clone());
@@ -294,9 +285,7 @@ impl TtsEngine for SystemTtsEngine {
                 })
             }
 
-            SystemBackend::None => {
-                Err(anyhow!("No system TTS backend available"))
-            }
+            SystemBackend::None => Err(anyhow!("No system TTS backend available")),
         }
     }
 }

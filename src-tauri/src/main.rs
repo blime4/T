@@ -9,8 +9,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tauri::{
-    AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, State, SystemTray, SystemTrayEvent, SystemTrayMenu,
-    SystemTrayMenuItem, WindowBuilder, WindowUrl, WindowEvent,
+    AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, State, SystemTray, SystemTrayEvent,
+    SystemTrayMenu, SystemTrayMenuItem, WindowBuilder, WindowEvent, WindowUrl,
 };
 use tokio::sync::Mutex;
 use tts::{EngineType, TtsConfig, TtsManager, TtsRequest, VoiceInfo};
@@ -79,10 +79,7 @@ async fn get_playback_state(state: State<'_, AppState>) -> Result<String, String
 }
 
 #[tauri::command]
-async fn list_voices(
-    state: State<'_, AppState>,
-    engine: String,
-) -> Result<Vec<VoiceInfo>, String> {
+async fn list_voices(state: State<'_, AppState>, engine: String) -> Result<Vec<VoiceInfo>, String> {
     let engine_type = match engine.as_str() {
         "system" => EngineType::System,
         "piper" => EngineType::Piper,
@@ -110,10 +107,7 @@ async fn get_tts_config(state: State<'_, AppState>) -> Result<TtsConfig, String>
 }
 
 #[tauri::command]
-async fn update_tts_config(
-    state: State<'_, AppState>,
-    config: TtsConfig,
-) -> Result<(), String> {
+async fn update_tts_config(state: State<'_, AppState>, config: TtsConfig) -> Result<(), String> {
     // Persist to disk
     config::save_config(&config).map_err(|e| e.to_string())?;
     // Update in-memory
@@ -126,7 +120,9 @@ async fn update_tts_config(
 async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, String> {
     let current = state.clipboard_monitor_enabled.load(Ordering::Relaxed);
     let new_state = !current;
-    state.clipboard_monitor_enabled.store(new_state, Ordering::Relaxed);
+    state
+        .clipboard_monitor_enabled
+        .store(new_state, Ordering::Relaxed);
     Ok(new_state)
 }
 
@@ -135,7 +131,8 @@ async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, St
 fn create_system_tray() -> SystemTray {
     let show_hide = CustomMenuItem::new("show_hide".to_string(), "Show/Hide");
     let quick_input = CustomMenuItem::new("quick_input".to_string(), "Quick Input");
-    let clipboard_monitor = CustomMenuItem::new("clipboard_monitor".to_string(), "Clipboard Monitor: OFF");
+    let clipboard_monitor =
+        CustomMenuItem::new("clipboard_monitor".to_string(), "Clipboard Monitor: OFF");
     let settings = CustomMenuItem::new("settings".to_string(), "Settings");
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
 
@@ -187,10 +184,16 @@ fn handle_system_tray_event(app: &AppHandle, event: SystemTrayEvent) {
                     if let Some(state) = app.try_state::<AppState>() {
                         let current = state.clipboard_monitor_enabled.load(Ordering::Relaxed);
                         let new_state = !current;
-                        state.clipboard_monitor_enabled.store(new_state, Ordering::Relaxed);
-                        
+                        state
+                            .clipboard_monitor_enabled
+                            .store(new_state, Ordering::Relaxed);
+
                         // Update tray menu item text
-                        let text = if new_state { "Clipboard Monitor: ON" } else { "Clipboard Monitor: OFF" };
+                        let text = if new_state {
+                            "Clipboard Monitor: ON"
+                        } else {
+                            "Clipboard Monitor: OFF"
+                        };
                         let tray = app.tray_handle();
                         let _ = tray.get_item("clipboard_monitor").set_title(text);
                     }
@@ -252,7 +255,7 @@ fn start_clipboard_monitor(app_handle: AppHandle, monitor_enabled: Arc<AtomicBoo
             if let Ok(text) = clipboard.get_text() {
                 if text != last_text && !text.trim().is_empty() {
                     last_text = text.clone();
-                    
+
                     // Emit clipboard text to frontend
                     if let Some(window) = app_handle.get_window("cat") {
                         let _ = window.emit("clipboard-text", text);
@@ -267,31 +270,33 @@ fn start_clipboard_monitor(app_handle: AppHandle, monitor_enabled: Arc<AtomicBoo
 
 fn register_global_hotkeys(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let app_handle = app.clone();
-    
+
     // Ctrl+Shift+S - Toggle input bubble
-    app.global_shortcut_manager().register("CmdOrCtrl+Shift+S", move || {
-        if let Some(window) = app_handle.get_window("cat") {
-            let _ = window.show();
-            let _ = window.set_focus();
-            let _ = window.emit("toggle-input", ());
-        }
-    })?;
+    app.global_shortcut_manager()
+        .register("CmdOrCtrl+Shift+S", move || {
+            if let Some(window) = app_handle.get_window("cat") {
+                let _ = window.show();
+                let _ = window.set_focus();
+                let _ = window.emit("toggle-input", ());
+            }
+        })?;
 
     let app_handle2 = app.clone();
-    
+
     // Ctrl+Shift+R - Read clipboard content
-    app.global_shortcut_manager().register("CmdOrCtrl+Shift+R", move || {
-        if let Some(window) = app_handle2.get_window("cat") {
-            // Read clipboard and send text to frontend
-            if let Ok(mut clipboard) = Clipboard::new() {
-                if let Ok(text) = clipboard.get_text() {
-                    if !text.trim().is_empty() {
-                        let _ = window.emit("read-clipboard", text);
+    app.global_shortcut_manager()
+        .register("CmdOrCtrl+Shift+R", move || {
+            if let Some(window) = app_handle2.get_window("cat") {
+                // Read clipboard and send text to frontend
+                if let Ok(mut clipboard) = Clipboard::new() {
+                    if let Ok(text) = clipboard.get_text() {
+                        if !text.trim().is_empty() {
+                            let _ = window.emit("read-clipboard", text);
+                        }
                     }
                 }
             }
-        }
-    })?;
+        })?;
 
     Ok(())
 }
@@ -333,15 +338,12 @@ fn main() {
             Ok(())
         })
         .on_window_event(|event| {
-            match event.event() {
-                WindowEvent::CloseRequested { api, .. } => {
-                    // Only hide the main cat window; let other windows (settings) close normally
-                    if event.window().label() == "cat" {
-                        event.window().hide().unwrap();
-                        api.prevent_close();
-                    }
+            if let WindowEvent::CloseRequested { api, .. } = event.event() {
+                // Only hide the main cat window; let other windows (settings) close normally
+                if event.window().label() == "cat" {
+                    event.window().hide().unwrap();
+                    api.prevent_close();
                 }
-                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![
