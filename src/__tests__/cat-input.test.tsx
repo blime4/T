@@ -27,8 +27,8 @@ describe("Cat click → Input bubble", () => {
     // Input bubble should NOT be visible initially
     expect(screen.queryByPlaceholderText(/Type something to say/)).not.toBeInTheDocument();
 
-    // Click the cat (the element with the tooltip)
-    const cat = screen.getByTitle("Click to type · Right-click for menu");
+    // Click the cat (the element with the tooltip — use regex since mood may change title)
+    const cat = screen.getByTitle(/Right-click for menu/);
     await user.click(cat);
 
     // Input bubble SHOULD now be visible
@@ -39,14 +39,14 @@ describe("Cat click → Input bubble", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const cat = screen.getByTitle("Click to type · Right-click for menu");
-
-    // First click: show input
+    // First click: show input (cat is idle → title is "Click to type...")
+    const cat = screen.getByTitle(/Right-click for menu/);
     await user.click(cat);
     expect(screen.getByPlaceholderText(/Type something to say/)).toBeInTheDocument();
 
-    // Second click: hide input
-    await user.click(cat);
+    // Second click: hide input (cat is now happy → re-query by title regex)
+    const catAgain = screen.getByTitle(/Right-click for menu/);
+    await user.click(catAgain);
     expect(screen.queryByPlaceholderText(/Type something to say/)).not.toBeInTheDocument();
   });
 
