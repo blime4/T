@@ -1,0 +1,21 @@
+[package]
+name = "neko-tts"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tauri = { version = "1", features = ["shell-open", "global-shortcut-all", "system-tray", "window-all"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+rodio = "0.19"
+reqwest = { version = "0.12", features = ["json"] }
+toml = "0.8"
+dirs = "5"
+async-trait = "0.1"
+anyhow = "1"
+arboard = "3"
+base64 = "0.22"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
