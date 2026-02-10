@@ -215,7 +215,6 @@ fn handle_system_tray_event(app: &AppHandle, event: SystemTrayEvent) {
                         .min_inner_size(420.0, 480.0)
                         .resizable(true)
                         .decorations(true)
-                        .transparent(false)
                         .always_on_top(false)
                         .center()
                         .build();
