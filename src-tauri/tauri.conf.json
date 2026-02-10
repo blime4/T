@@ -27,6 +27,7 @@
         "icons/icon.png"
       ]
     },
+    "macOSPrivateApi": true,
     "security": {
       "csp": null
     },

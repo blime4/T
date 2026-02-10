@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import Lottie from "lottie-react";
 import { useAppStore } from "../store/useAppStore";
+import { adjustMenuPosition } from "../utils/menuPosition";
 import catIdle from "../assets/cat-idle.json";
 import catSpeaking from "../assets/cat-speaking.json";
 import catListening from "../assets/cat-listening.json";
@@ -57,10 +58,18 @@ export default function CatCharacter() {
     setTimeout(() => setBounce(false), 300);
   };
 
+  // Approximate context menu size (matches CSS min-width:180px, ~5 items)
+  const MENU_SIZE = { width: 200, height: 180 };
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    const adjusted = adjustMenuPosition(
+      { x: e.clientX, y: e.clientY },
+      MENU_SIZE,
+      { width: window.innerWidth, height: window.innerHeight }
+    );
+    setContextMenu(adjusted);
   }, []);
 
   const closeContextMenu = useCallback(() => {
@@ -127,7 +136,6 @@ export default function CatCharacter() {
   return (
     <>
       <div
-        data-tauri-drag-region
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={() => setIsHovering(true)}

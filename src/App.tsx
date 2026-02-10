@@ -94,8 +94,9 @@ export default function App() {
         {showSpeech && <SpeechBubble />}
       </div>
 
-      {/* Cat character — dragging handled programmatically inside CatCharacter */}
-      <div className="cat-area">
+      {/* Cat character — cat-area is draggable, but cat-wrapper inside is not
+           (so clicks on the cat itself are not intercepted by Tauri drag) */}
+      <div className="cat-area" data-tauri-drag-region>
         <CatCharacter />
       </div>
 

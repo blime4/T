@@ -31,10 +31,20 @@ describe("Issue 4: Drag region limited to cat body", () => {
     });
   });
 
-  it("should have data-tauri-drag-region on the cat-wrapper", () => {
+  it("should NOT have data-tauri-drag-region on the cat-wrapper (prevents click)", () => {
     render(<App />);
     const catWrapper = screen.getByTitle(/Right-click for menu/);
-    expect(catWrapper.getAttribute("data-tauri-drag-region")).toBeDefined();
+    // data-tauri-drag-region intercepts mousedown and blocks onClick,
+    // so the cat-wrapper must NOT have it. Dragging is handled by the
+    // surrounding cat-area or status-bar instead.
+    expect(catWrapper.hasAttribute("data-tauri-drag-region")).toBe(false);
+  });
+
+  it("should have data-tauri-drag-region on the cat-area container", () => {
+    render(<App />);
+    const catArea = document.querySelector(".cat-area");
+    expect(catArea).not.toBeNull();
+    expect(catArea!.getAttribute("data-tauri-drag-region")).toBeDefined();
   });
 
   it("should have data-tauri-drag-region on the status-bar", () => {
