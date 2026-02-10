@@ -43,6 +43,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      # Tauri's generate_context!() macro requires distDir to exist at compile time
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build frontend (needed for Tauri compile-time check)
+        run: |
+          npm ci
+          npm run build
+
       - name: Check formatting
         working-directory: src-tauri
         run: cargo fmt -- --check
