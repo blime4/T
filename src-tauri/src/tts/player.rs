@@ -141,7 +141,7 @@ impl AudioPlayer {
         }
     }
 
-    /// Play audio from a TtsResult (WAV/AIFF bytes).
+    /// Play audio from a TtsResult (WAV/MP3/FLAC/Vorbis bytes).
     pub fn play(&self, result: &TtsResult) -> Result<()> {
         self.send_cmd(PlayerCommand::Play(result.audio_data.clone()))
     }

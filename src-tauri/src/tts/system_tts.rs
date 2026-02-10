@@ -213,8 +213,14 @@ impl TtsEngine for SystemTtsEngine {
             SystemBackend::Say => {
                 use tokio::fs;
                 let tmp =
-                    std::env::temp_dir().join(format!("neko_tts_{}.aiff", std::process::id()));
-                let mut args = vec!["-o".to_string(), tmp.to_string_lossy().to_string()];
+                    std::env::temp_dir().join(format!("neko_tts_{}.wav", std::process::id()));
+                let mut args = vec![
+                    "-o".to_string(),
+                    tmp.to_string_lossy().to_string(),
+                    // Output WAV instead of AIFF so that rodio can decode it
+                    "--file-format=WAVE".to_string(),
+                    "--data-format=LEI16@22050".to_string(),
+                ];
                 if let Some(ref voice) = request.voice {
                     args.push("-v".to_string());
                     args.push(voice.clone());
@@ -236,7 +242,7 @@ impl TtsEngine for SystemTtsEngine {
                     audio_data,
                     sample_rate: 22050,
                     channels: 1,
-                    format: "aiff".to_string(),
+                    format: "wav".to_string(),
                 })
             }
 
