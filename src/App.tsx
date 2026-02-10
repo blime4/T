@@ -88,16 +88,13 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* Drag region — covers empty space, but not interactive elements */}
-      <div className="drag-region" data-tauri-drag-region />
-
       {/* Bubbles container — positioned above the cat */}
       <div className="bubble-area">
         {showInput && !showSpeech && <InputBubble />}
         {showSpeech && <SpeechBubble />}
       </div>
 
-      {/* Cat character */}
+      {/* Cat character — dragging handled programmatically inside CatCharacter */}
       <div className="cat-area">
         <CatCharacter />
       </div>

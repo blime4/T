@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
 use super::engine::TtsEngine;
+use super::silent_command;
 use super::types::{TtsRequest, TtsResult, VoiceInfo};
 
 /// Piper offline TTS engine.
@@ -58,7 +58,7 @@ impl TtsEngine for PiperTtsEngine {
 
     async fn is_available(&self) -> bool {
         // Check if piper binary exists and is executable
-        let status = Command::new(&self.piper_binary)
+        let status = silent_command(&self.piper_binary)
             .arg("--help")
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -98,7 +98,7 @@ impl TtsEngine for PiperTtsEngine {
         // piper reads text from stdin and writes WAV to stdout
         // Usage: echo "text" | piper --model model.onnx --output-raw
         // With --output_file - it writes WAV to stdout
-        let mut child = Command::new(&self.piper_binary)
+        let mut child = silent_command(&self.piper_binary)
             .arg("--model")
             .arg(model)
             .arg("--output_file")

@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::process::Stdio;
-use tokio::process::Command;
 
 use super::engine::TtsEngine;
+use super::silent_command;
 use super::types::{TtsRequest, TtsResult, VoiceInfo};
 
 /// System TTS engine that calls platform-native TTS via subprocess.
@@ -64,7 +64,7 @@ impl SystemTtsEngine {
     }
 
     async fn command_exists(cmd: &str) -> bool {
-        Command::new("which")
+        silent_command("which")
             .arg(cmd)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -94,7 +94,7 @@ impl TtsEngine for SystemTtsEngine {
                     SystemBackend::Espeak => "espeak",
                     _ => unreachable!(),
                 };
-                let output = Command::new(cmd).arg("--voices").output().await?;
+                let output = silent_command(cmd).arg("--voices").output().await?;
                 let text = String::from_utf8_lossy(&output.stdout);
                 let voices: Vec<VoiceInfo> = text
                     .lines()
@@ -117,7 +117,7 @@ impl TtsEngine for SystemTtsEngine {
 
             #[cfg(target_os = "macos")]
             SystemBackend::Say => {
-                let output = Command::new("say").arg("-v").arg("?").output().await?;
+                let output = silent_command("say").arg("-v").arg("?").output().await?;
                 let text = String::from_utf8_lossy(&output.stdout);
                 let voices: Vec<VoiceInfo> = text
                     .lines()
@@ -148,7 +148,7 @@ impl TtsEngine for SystemTtsEngine {
                         "$($v.Name)|$($v.Culture.Name)"
                     }
                 "#;
-                let output = Command::new("powershell")
+                let output = silent_command("powershell")
                     .args(["-NoProfile", "-Command", ps_script])
                     .output()
                     .await?;
@@ -194,7 +194,7 @@ impl TtsEngine for SystemTtsEngine {
                 }
                 args.push(request.text.clone());
 
-                let output = Command::new(cmd).args(&args).output().await?;
+                let output = silent_command(cmd).args(&args).output().await?;
 
                 if !output.status.success() {
                     let err = String::from_utf8_lossy(&output.stderr);
@@ -224,7 +224,7 @@ impl TtsEngine for SystemTtsEngine {
                 args.push(rate_wpm.to_string());
                 args.push(request.text.clone());
 
-                let status = Command::new("say").args(&args).status().await?;
+                let status = silent_command("say").args(&args).status().await?;
                 if !status.success() {
                     return Err(anyhow!("macOS say command failed"));
                 }
@@ -265,7 +265,7 @@ impl TtsEngine for SystemTtsEngine {
                     request.text.replace('"', "`\"")
                 );
 
-                let status = Command::new("powershell")
+                let status = silent_command("powershell")
                     .args(["-NoProfile", "-Command", &ps_script])
                     .status()
                     .await?;

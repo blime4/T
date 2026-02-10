@@ -36,7 +36,9 @@ export default function CatCharacter() {
   const [contextMenu, setContextMenu] = useState<ContextMenuPos | null>(null);
   const [bounce, setBounce] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
     if (contextMenu) {
       setContextMenu(null);
       return;
@@ -125,6 +127,7 @@ export default function CatCharacter() {
   return (
     <>
       <div
+        data-tauri-drag-region
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={() => setIsHovering(true)}
@@ -143,7 +146,7 @@ export default function CatCharacter() {
           animationData={animationMap[catMood]}
           loop={true}
           autoplay={true}
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: "100%", pointerEvents: "none" }}
         />
 
         {/* Status indicator dot */}

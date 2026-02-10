@@ -52,17 +52,9 @@ body,
   position: relative;
 }
 
-/* ─── Drag Region (background layer for window dragging) ── */
-.drag-region {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  cursor: grab;
-}
-
-.drag-region:active {
-  cursor: grabbing;
-}
+/* ─── Drag: the app-root itself is the drag region ─────── */
+/* Child interactive elements (cat, bubbles, buttons) stop
+   event propagation so clicks reach them instead of dragging. */
 
 /* ─── Bubble Area ───────────────────────────────────────── */
 .bubble-area {
