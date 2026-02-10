@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import CatCharacter from "./components/CatCharacter";
 import InputBubble from "./components/InputBubble";
 import SpeechBubble from "./components/SpeechBubble";
 import { useAppStore } from "./store/useAppStore";
 import "./App.css";
+
+// Auto-sleep after 3 minutes of idle
+const IDLE_SLEEP_MS = 3 * 60 * 1000;
 
 export default function App() {
   const fetchEngines = useAppStore((s) => s.fetchEngines);
@@ -13,11 +16,40 @@ export default function App() {
   const toggleInput = useAppStore((s) => s.toggleInput);
   const speak = useAppStore((s) => s.speak);
   const setShowInput = useAppStore((s) => s.setShowInput);
+  const catMood = useAppStore((s) => s.catMood);
+  const setCatMood = useAppStore((s) => s.setCatMood);
+  const playbackState = useAppStore((s) => s.playbackState);
+  const clipboardMonitor = useAppStore((s) => s.clipboardMonitor);
+
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch available engines on mount
   useEffect(() => {
     fetchEngines();
   }, [fetchEngines]);
+
+  // Auto-sleep timer: if idle for IDLE_SLEEP_MS, switch to sleeping
+  useEffect(() => {
+    // Reset timer whenever mood or playback changes
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+
+    // Only start sleep timer when truly idle
+    if (catMood === "idle" && playbackState === "idle") {
+      idleTimerRef.current = setTimeout(() => {
+        const state = useAppStore.getState();
+        if (state.catMood === "idle" && state.playbackState === "idle") {
+          setCatMood("sleeping");
+        }
+      }, IDLE_SLEEP_MS);
+    }
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [catMood, playbackState, setCatMood]);
 
   // Listen for backend events
   useEffect(() => {
@@ -67,8 +99,14 @@ export default function App() {
         <CatCharacter />
       </div>
 
-      {/* Neko TTS label */}
-      <div className="label">Neko TTS</div>
+      {/* Status bar */}
+      <div className="status-bar">
+        <span className="label">Neko TTS</span>
+        {clipboardMonitor && <span className="status-badge">📋 Monitor</span>}
+        {playbackState === "playing" && <span className="status-badge playing">▶ Playing</span>}
+        {playbackState === "synthesizing" && <span className="status-badge synth">⏳ Synth</span>}
+        {playbackState === "paused" && <span className="status-badge paused">⏸ Paused</span>}
+      </div>
     </div>
   );
 }
