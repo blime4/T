@@ -21,3 +21,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Helper/debug scripts
+analyze-lottie.mjs
+check-colors.mjs
+fix-blush.mjs
+transform-lottie.mjs
