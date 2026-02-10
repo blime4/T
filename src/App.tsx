@@ -103,8 +103,15 @@ export default function App() {
       </div>
 
       {/* Status bar */}
-      <div className="status-bar" data-tauri-drag-region>
-        <span className="label">Neko TTS</span>
+      <div className="status-bar glass" data-tauri-drag-region>
+        <span className="label">
+          {catMood === "speaking" && "🔊 "}
+          {catMood === "listening" && "👂 "}
+          {catMood === "sleeping" && "💤 "}
+          {catMood === "happy" && "😊 "}
+          {catMood === "idle" && "🐱 "}
+          Neko TTS
+        </span>
         {clipboardMonitor && <span className="status-badge">📋 Monitor</span>}
         {playbackState === "playing" && <span className="status-badge playing">▶ Playing</span>}
         {playbackState === "synthesizing" && <span className="status-badge synth">⏳ Synth</span>}
