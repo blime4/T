@@ -87,7 +87,10 @@ export default function App() {
   }, [toggleInput, speak, setShowInput]);
 
   return (
-    <div className="app-root" data-tauri-drag-region>
+    <div className="app-root">
+      {/* Drag region — covers empty space, but not interactive elements */}
+      <div className="drag-region" data-tauri-drag-region />
+
       {/* Bubbles container — positioned above the cat */}
       <div className="bubble-area">
         {showInput && !showSpeech && <InputBubble />}
@@ -100,7 +103,7 @@ export default function App() {
       </div>
 
       {/* Status bar */}
-      <div className="status-bar">
+      <div className="status-bar" data-tauri-drag-region>
         <span className="label">Neko TTS</span>
         {clipboardMonitor && <span className="status-badge">📋 Monitor</span>}
         {playbackState === "playing" && <span className="status-badge playing">▶ Playing</span>}

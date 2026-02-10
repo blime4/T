@@ -8,12 +8,15 @@ export type PlaybackState =
   | "paused"
   | "error";
 
-export type CatMood = "idle" | "speaking" | "listening" | "sleeping";
+export type CatMood = "idle" | "speaking" | "listening" | "sleeping" | "happy";
 
 interface AppState {
   // ─── Cat state ──────────────────────────────
   catMood: CatMood;
   setCatMood: (mood: CatMood) => void;
+  triggerHappy: () => void;
+  isHovering: boolean;
+  setIsHovering: (hovering: boolean) => void;
 
   // ─── Input ──────────────────────────────────
   inputText: string;
@@ -53,6 +56,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   // ─── Cat state ──────────────────────────────
   catMood: "idle",
   setCatMood: (mood) => set({ catMood: mood }),
+  triggerHappy: () => {
+    const currentMood = get().catMood;
+    set({ catMood: "happy" });
+    setTimeout(() => {
+      const state = get();
+      if (state.catMood === "happy") {
+        set({ catMood: currentMood === "happy" ? "idle" : currentMood });
+      }
+    }, 2000);
+  },
+  isHovering: false,
+  setIsHovering: (hovering) => set({ isHovering: hovering }),
 
   // ─── Input ──────────────────────────────────
   inputText: "",
@@ -110,11 +125,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       setTimeout(() => {
         const state = get();
         if (state.catMood === "speaking") {
-          set({
-            catMood: "idle",
-            playbackState: "idle",
-            showSpeech: false,
-          });
+          // Show happy mood briefly after successful speak
+          set({ catMood: "happy" });
+          setTimeout(() => {
+            const currentState = get();
+            if (currentState.catMood === "happy") {
+              set({
+                catMood: "idle",
+                playbackState: "idle",
+                showSpeech: false,
+              });
+            }
+          }, 1500);
         }
       }, duration);
     } catch (e) {

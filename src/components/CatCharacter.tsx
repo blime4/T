@@ -5,19 +5,14 @@ import catIdle from "../assets/cat-idle.json";
 import catSpeaking from "../assets/cat-speaking.json";
 import catListening from "../assets/cat-listening.json";
 import catSleeping from "../assets/cat-sleeping.json";
+import catHappy from "../assets/cat-happy.json";
 
 const animationMap = {
   idle: catIdle,
   speaking: catSpeaking,
   listening: catListening,
   sleeping: catSleeping,
-};
-
-const moodGlow: Record<string, string> = {
-  speaking: "drop-shadow(0 0 8px rgba(255, 180, 50, 0.6))",
-  listening: "drop-shadow(0 0 6px rgba(100, 180, 255, 0.5))",
-  sleeping: "drop-shadow(0 0 4px rgba(180, 160, 255, 0.4))",
-  idle: "none",
+  happy: catHappy,
 };
 
 interface ContextMenuPos {
@@ -34,6 +29,9 @@ export default function CatCharacter() {
   const speak = useAppStore((s) => s.speak);
   const toggleClipboardMonitor = useAppStore((s) => s.toggleClipboardMonitor);
   const clipboardMonitor = useAppStore((s) => s.clipboardMonitor);
+  const triggerHappy = useAppStore((s) => s.triggerHappy);
+  const setIsHovering = useAppStore((s) => s.setIsHovering);
+  const isHovering = useAppStore((s) => s.isHovering);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuPos | null>(null);
   const [bounce, setBounce] = useState(false);
@@ -46,6 +44,10 @@ export default function CatCharacter() {
     if (playbackState === "playing" || playbackState === "synthesizing") {
       stopSpeaking();
     } else {
+      // If idle or sleeping, trigger happy before toggling input
+      if (catMood === "idle" || catMood === "sleeping") {
+        triggerHappy();
+      }
       toggleInput();
     }
     // Trigger bounce animation
@@ -108,20 +110,31 @@ export default function CatCharacter() {
       ? "Click to stop · Right-click for menu"
       : catMood === "sleeping"
       ? "Right-click to wake up"
+      : catMood === "happy"
+      ? "Happy cat! · Right-click for menu"
       : "Click to type · Right-click for menu";
+
+  // Build CSS class list
+  const wrapperClasses = [
+    "cat-wrapper",
+    `cat-${catMood}-glow`,
+    bounce ? "cat-bounce" : "",
+    isHovering ? "cat-hover" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <>
       <div
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={bounce ? "cat-bounce" : ""}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className={wrapperClasses}
         style={{
           cursor: "pointer",
           width: 160,
           height: 160,
           position: "relative",
-          filter: moodGlow[catMood] || "none",
           transition: "filter 0.3s ease",
         }}
         title={tooltip}
@@ -157,6 +170,24 @@ export default function CatCharacter() {
             {catMood === "speaking" && "🔊"}
             {catMood === "listening" && "👂"}
             {catMood === "sleeping" && "💤"}
+            {catMood === "happy" && "😊"}
+          </div>
+        )}
+
+        {/* Floating hearts for happy mood */}
+        {catMood === "happy" && (
+          <div className="particles-container">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                className="particle heart"
+                style={{
+                  animationDelay: `${i * 0.3}s`,
+                  left: `${20 + i * 15}%`,
+                  top: "30%",
+                }}
+                key={i}
+              />
+            ))}
           </div>
         )}
       </div>
