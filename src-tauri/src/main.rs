@@ -131,10 +131,7 @@ async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, St
 }
 
 #[tauri::command]
-async fn open_studio(
-    app_handle: AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+async fn open_studio(app_handle: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     // If studio window already exists, just show & focus it
     if let Some(window) = app_handle.get_window("studio") {
         let _ = window.show();
@@ -155,7 +152,9 @@ async fn open_studio(
             let already_up = client.get(&health_url).send().await.is_ok();
 
             if !already_up {
-                srv.start().await.map_err(|e| format!("Failed to start server: {}", e))?;
+                srv.start()
+                    .await
+                    .map_err(|e| format!("Failed to start server: {}", e))?;
             }
         }
         // Wait for server to be ready
@@ -165,20 +164,16 @@ async fn open_studio(
     }
 
     // Create the studio window
-    let _window = WindowBuilder::new(
-        &app_handle,
-        "studio",
-        WindowUrl::App("index.html".into()),
-    )
-    .title("Neko TTS — Studio")
-    .inner_size(1200.0, 800.0)
-    .min_inner_size(900.0, 600.0)
-    .resizable(true)
-    .decorations(false)
-    .always_on_top(false)
-    .center()
-    .build()
-    .map_err(|e| e.to_string())?;
+    let _window = WindowBuilder::new(&app_handle, "studio", WindowUrl::App("index.html".into()))
+        .title("Neko TTS — Studio")
+        .inner_size(1200.0, 800.0)
+        .min_inner_size(900.0, 600.0)
+        .resizable(true)
+        .decorations(false)
+        .always_on_top(false)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }

@@ -212,8 +212,7 @@ impl TtsEngine for SystemTtsEngine {
             #[cfg(target_os = "macos")]
             SystemBackend::Say => {
                 use tokio::fs;
-                let tmp =
-                    std::env::temp_dir().join(format!("neko_tts_{}.wav", std::process::id()));
+                let tmp = std::env::temp_dir().join(format!("neko_tts_{}.wav", std::process::id()));
                 let mut args = vec![
                     "-o".to_string(),
                     tmp.to_string_lossy().to_string(),

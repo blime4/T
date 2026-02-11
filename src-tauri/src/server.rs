@@ -163,8 +163,7 @@ impl ServerProcess {
 
         // Wait for graceful exit
         if let Some(ref mut child) = self.child {
-            let wait_result =
-                tokio::time::timeout(SHUTDOWN_GRACE_PERIOD, child.wait()).await;
+            let wait_result = tokio::time::timeout(SHUTDOWN_GRACE_PERIOD, child.wait()).await;
 
             match wait_result {
                 Ok(Ok(status)) => {
