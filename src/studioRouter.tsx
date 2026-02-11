@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
 import { AppFrame } from '@/components/studio/AppFrame/AppFrame';
 import { AudioTab } from '@/components/studio/AudioTab/AudioTab';
+import { LogsTab } from '@/components/studio/LogsTab/LogsTab';
 import { MainEditor } from '@/components/studio/MainEditor/MainEditor';
 import { ModelsTab } from '@/components/studio/ModelsTab/ModelsTab';
 import { ServerTab } from '@/components/studio/ServerTab/ServerTab';
@@ -115,6 +116,13 @@ const serverRoute = createRoute({
   component: ServerTab,
 });
 
+// Logs route
+const logsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/logs',
+  component: LogsTab,
+});
+
 // Route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -123,6 +131,7 @@ const routeTree = rootRoute.addChildren([
   audioRoute,
   modelsRoute,
   serverRoute,
+  logsRoute,
 ]);
 
 // Create router

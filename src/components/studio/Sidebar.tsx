@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router';
-import { Box, BookOpen, Loader2, Mic, Server, Speaker, Volume2 } from 'lucide-react';
+import { Box, BookOpen, Loader2, Mic, ScrollText, Server, Speaker, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useGenerationStore } from '@/stores/studio/generationStore';
 import { usePlayerStore } from '@/stores/studio/playerStore';
@@ -15,6 +15,7 @@ const tabs = [
   { id: 'audio', path: '/audio', icon: Speaker, label: 'Audio' },
   { id: 'models', path: '/models', icon: Box, label: 'Models' },
   { id: 'server', path: '/server', icon: Server, label: 'Server' },
+  { id: 'logs', path: '/logs', icon: ScrollText, label: 'Logs' },
 ];
 
 export function Sidebar({ isMacOS }: SidebarProps) {
