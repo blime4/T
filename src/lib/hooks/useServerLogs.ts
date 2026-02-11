@@ -14,7 +14,7 @@ export function useServerLogs() {
     let cancelled = false;
     const promise = listen<ServerLogPayload>('server-log', (event) => {
       if (!cancelled) {
-        addLog(event.payload);
+        addLog({ ...event.payload, timestamp: Date.now() });
       }
     });
 
