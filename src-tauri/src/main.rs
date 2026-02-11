@@ -131,7 +131,7 @@ async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, St
 }
 
 #[tauri::command]
-async fn open_studio(app_handle: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+async fn open_studio(app_handle: AppHandle) -> Result<(), String> {
     // If studio window already exists, just show & focus it
     if let Some(window) = app_handle.get_window("studio") {
         let _ = window.show();
@@ -139,31 +139,7 @@ async fn open_studio(app_handle: AppHandle, state: State<'_, AppState>) -> Resul
         return Ok(());
     }
 
-    // Ensure voicebox-server is running before opening studio
-    {
-        let mut srv = state.server.lock().await;
-        if !srv.is_running() {
-            // Quick check: maybe an external instance is already up
-            let client = reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(2))
-                .build()
-                .map_err(|e| e.to_string())?;
-            let health_url = format!("{}/health", srv.server_url());
-            let already_up = client.get(&health_url).send().await.is_ok();
-
-            if !already_up {
-                srv.start()
-                    .await
-                    .map_err(|e| format!("Failed to start server: {}", e))?;
-            }
-        }
-        // Wait for server to be ready
-        srv.health_check()
-            .await
-            .map_err(|e| format!("Server health check failed: {}", e))?;
-    }
-
-    // Create the studio window
+    // Create the studio window immediately (no blocking on server)
     let _window = WindowBuilder::new(&app_handle, "studio", WindowUrl::App("index.html".into()))
         .title("Neko TTS — Studio")
         .inner_size(1200.0, 800.0)
@@ -178,16 +154,85 @@ async fn open_studio(app_handle: AppHandle, state: State<'_, AppState>) -> Resul
     Ok(())
 }
 
+/// Start the voicebox-server and wait for it to become healthy.
+/// Called by the Studio frontend after the window is open.
 #[tauri::command]
-async fn shutdown_server(state: State<'_, AppState>) -> Result<(), String> {
+async fn start_server(state: State<'_, AppState>, remote: Option<bool>) -> Result<String, String> {
+    let _ = remote; // reserved for future remote-server support
+    let mut srv = state.server.lock().await;
+
+    if !srv.is_running() {
+        // Quick check: maybe an external instance is already up
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(2))
+            .build()
+            .map_err(|e| e.to_string())?;
+        let health_url = format!("{}/health", srv.server_url());
+        let already_up = client.get(&health_url).send().await.is_ok();
+
+        if !already_up {
+            srv.start()
+                .await
+                .map_err(|e| format!("Failed to start server: {}", e))?;
+        }
+    }
+
+    // Wait for server to be ready
+    srv.health_check()
+        .await
+        .map_err(|e| format!("Server health check failed: {}", e))?;
+
+    Ok(srv.server_url().to_string())
+}
+
+/// Stop the voicebox-server.
+#[tauri::command]
+async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
     let mut srv = state.server.lock().await;
     srv.stop().await.map_err(|e| e.to_string())
 }
 
+/// Hint to keep the server running even after studio closes.
 #[tauri::command]
-async fn get_server_url(state: State<'_, AppState>) -> Result<String, String> {
-    let srv = state.server.lock().await;
-    Ok(srv.server_url().to_string())
+async fn set_keep_server_running(_keep: bool) -> Result<(), String> {
+    // TODO: implement keep-alive flag if needed
+    Ok(())
+}
+
+// ─── Audio Commands (stubs – real impl requires cpal/rodio) ──────
+
+#[derive(serde::Serialize)]
+struct AudioDevice {
+    id: String,
+    name: String,
+    is_default: bool,
+}
+
+#[tauri::command]
+async fn start_system_audio_capture(_max_duration_secs: f64) -> Result<(), String> {
+    // TODO: implement with cpal
+    Err("System audio capture not yet implemented".to_string())
+}
+
+#[tauri::command]
+async fn stop_system_audio_capture() -> Result<Vec<u8>, String> {
+    Err("System audio capture not yet implemented".to_string())
+}
+
+#[tauri::command]
+async fn list_output_devices() -> Result<Vec<AudioDevice>, String> {
+    // Return empty list until real audio device enumeration is added
+    Ok(vec![])
+}
+
+#[tauri::command]
+async fn play_to_devices(_audio_data: Vec<u8>, _device_ids: Vec<String>) -> Result<(), String> {
+    Err("Multi-device playback not yet implemented".to_string())
+}
+
+#[tauri::command]
+async fn stop_playback() -> Result<(), String> {
+    Ok(())
 }
 
 // ─── System Tray ──────────────────────────────────────────────────
@@ -444,8 +489,14 @@ fn main() {
             update_tts_config,
             toggle_clipboard_monitor,
             open_studio,
-            shutdown_server,
-            get_server_url,
+            start_server,
+            stop_server,
+            set_keep_server_running,
+            start_system_audio_capture,
+            stop_system_audio_capture,
+            list_output_devices,
+            play_to_devices,
+            stop_playback,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
