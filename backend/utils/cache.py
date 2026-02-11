@@ -3,9 +3,8 @@ Voice prompt caching utilities.
 """
 
 import hashlib
-import torch
 from pathlib import Path
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Dict, Any
 
 from .. import config
 
@@ -16,7 +15,7 @@ def _get_cache_dir() -> Path:
 
 
 # In-memory cache - can store dict (voice prompt) or tensor (legacy)
-_memory_cache: dict[str, Union[torch.Tensor, Dict[str, Any]]] = {}
+_memory_cache: Dict[str, Any] = {}
 
 
 def get_cache_key(audio_path: str, reference_text: str) -> str:
@@ -43,7 +42,7 @@ def get_cache_key(audio_path: str, reference_text: str) -> str:
 
 def get_cached_voice_prompt(
     cache_key: str,
-) -> Optional[Union[torch.Tensor, Dict[str, Any]]]:
+) -> Optional[Any]:
     """
     Get cached voice prompt if available.
 
@@ -61,6 +60,7 @@ def get_cached_voice_prompt(
     cache_file = _get_cache_dir() / f"{cache_key}.prompt"
     if cache_file.exists():
         try:
+            import torch
             prompt = torch.load(cache_file)
             _memory_cache[cache_key] = prompt
             return prompt
@@ -73,7 +73,7 @@ def get_cached_voice_prompt(
 
 def cache_voice_prompt(
     cache_key: str,
-    voice_prompt: Union[torch.Tensor, Dict[str, Any]],
+    voice_prompt: Any,
 ) -> None:
     """
     Cache voice prompt to memory and disk.
@@ -82,6 +82,8 @@ def cache_voice_prompt(
         cache_key: Cache key
         voice_prompt: Voice prompt (dict or tensor)
     """
+    import torch
+
     # Store in memory
     _memory_cache[cache_key] = voice_prompt
 

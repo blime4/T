@@ -30,37 +30,49 @@ impl ServerProcess {
         &self.server_url
     }
 
-    /// Resolve the voicebox-server binary path.
-    /// 1. Check next to the current executable (sidecar pattern)
-    /// 2. Fallback to bare name (PATH lookup)
-    fn resolve_binary_path() -> PathBuf {
-        let binary_name = if cfg!(target_os = "windows") {
-            "voicebox-server.exe"
-        } else {
-            "voicebox-server"
-        };
-
-        // Try sidecar: next to the running executable
+    /// Resolve the path to backend/server.py.
+    /// 1. Check relative to the current executable's ancestor (project root)
+    /// 2. Fallback to current working directory
+    fn resolve_server_script() -> PathBuf {
+        // In dev mode, the exe is at src-tauri/target/debug/neko-tts,
+        // so project root is 3 levels up. Check for backend/server.py there.
         if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                let sidecar = dir.join(binary_name);
-                if sidecar.exists() {
-                    return sidecar;
+            // Walk up from the executable looking for backend/server.py
+            let mut dir = exe.parent().map(|p| p.to_path_buf());
+            for _ in 0..5 {
+                if let Some(ref d) = dir {
+                    let candidate = d.join("backend").join("server.py");
+                    if candidate.exists() {
+                        return candidate;
+                    }
+                    dir = d.parent().map(|p| p.to_path_buf());
+                } else {
+                    break;
                 }
             }
         }
 
-        // Fallback: rely on PATH
-        PathBuf::from(binary_name)
+        // Fallback: relative to cwd
+        PathBuf::from("backend").join("server.py")
     }
 
-    /// Start the voicebox-server child process.
+    /// Resolve the python3 interpreter path.
+    fn resolve_python() -> PathBuf {
+        // Allow override via environment variable
+        if let Ok(p) = std::env::var("NEKO_PYTHON") {
+            return PathBuf::from(p);
+        }
+        PathBuf::from("python3")
+    }
+
+    /// Start the voicebox-server child process via python3.
     pub async fn start(&mut self) -> Result<()> {
         if self.is_running() {
             return Ok(());
         }
 
-        let binary = Self::resolve_binary_path();
+        let python = Self::resolve_python();
+        let script = Self::resolve_server_script();
         let data_dir = config::config_dir()
             .context("Failed to resolve config dir")?
             .join("voicebox-data");
@@ -70,12 +82,13 @@ impl ServerProcess {
             .with_context(|| format!("Failed to create data dir: {:?}", data_dir))?;
 
         println!(
-            "[server] Starting voicebox-server: {:?} --port {} --data-dir {:?}",
-            binary, DEFAULT_PORT, data_dir
+            "[server] Starting voicebox-server: {:?} {:?} --port {} --data-dir {:?}",
+            python, script, DEFAULT_PORT, data_dir
         );
 
-        let mut cmd = silent_command(&binary);
-        cmd.arg("--host")
+        let mut cmd = silent_command(&python);
+        cmd.arg(&script)
+            .arg("--host")
             .arg(DEFAULT_HOST)
             .arg("--port")
             .arg(DEFAULT_PORT.to_string())
@@ -86,7 +99,7 @@ impl ServerProcess {
 
         let child = cmd
             .spawn()
-            .with_context(|| format!("Failed to spawn voicebox-server at {:?}", binary))?;
+            .with_context(|| format!("Failed to spawn python3 {:?}", script))?;
 
         println!("[server] Process spawned (pid: {:?})", child.id());
         self.child = Some(child);

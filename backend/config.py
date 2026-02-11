@@ -5,11 +5,12 @@ Handles data directory configuration for production bundling.
 """
 
 from pathlib import Path
+from typing import Union
 
 # Default data directory (used in development)
 _data_dir = Path("data")
 
-def set_data_dir(path: str | Path):
+def set_data_dir(path: Union[str, Path]):
     """
     Set the data directory path.
 

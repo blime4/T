@@ -14,7 +14,6 @@ from datetime import datetime
 import asyncio
 import uvicorn
 import argparse
-import torch
 import tempfile
 import io
 from pathlib import Path
@@ -70,7 +69,6 @@ async def shutdown():
 @app.get("/health", response_model=models.HealthResponse)
 async def health():
     """Health check endpoint."""
-    from huggingface_hub import hf_hub_download, constants as hf_constants
     from pathlib import Path
     import os
 
@@ -78,21 +76,25 @@ async def health():
     backend_type = get_backend_type()
 
     # Check for GPU availability (CUDA or MPS)
-    has_cuda = torch.cuda.is_available()
-    has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-    gpu_available = has_cuda or has_mps
-
+    gpu_available = False
     gpu_type = None
-    if has_cuda:
-        gpu_type = f"CUDA ({torch.cuda.get_device_name(0)})"
-    elif has_mps:
-        gpu_type = "MPS (Apple Silicon)"
-    elif backend_type == "mlx":
-        gpu_type = "Metal (Apple Silicon via MLX)"
-
     vram_used = None
-    if has_cuda:
-        vram_used = torch.cuda.memory_allocated() / 1024 / 1024  # MB
+    try:
+        import torch
+        has_cuda = torch.cuda.is_available()
+        has_mps = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+        gpu_available = has_cuda or has_mps
+
+        if has_cuda:
+            gpu_type = f"CUDA ({torch.cuda.get_device_name(0)})"
+            vram_used = torch.cuda.memory_allocated() / 1024 / 1024  # MB
+        elif has_mps:
+            gpu_type = "MPS (Apple Silicon)"
+    except ImportError:
+        pass
+
+    if not gpu_type and backend_type == "mlx":
+        gpu_type = "Metal (Apple Silicon via MLX)"
     
     # Check if model is loaded - use the same logic as model status endpoint
     model_loaded = False
@@ -132,6 +134,7 @@ async def health():
                     break
         except (ImportError, Exception):
             # Method 2: Check cache directory (using HuggingFace's OS-specific cache location)
+            from huggingface_hub import constants as hf_constants
             cache_dir = hf_constants.HF_HUB_CACHE
             repo_cache = Path(cache_dir) / ("models--" + default_model_id.replace("/", "--"))
             if repo_cache.exists():
@@ -1640,6 +1643,13 @@ async def get_active_tasks():
 
 def _get_gpu_status() -> str:
     """Get GPU availability status."""
+    try:
+        import torch
+    except ImportError:
+        backend_type = get_backend_type()
+        if backend_type == "mlx":
+            return "Metal (Apple Silicon via MLX)"
+        return "Unknown (torch not installed)"
     backend_type = get_backend_type()
     if torch.cuda.is_available():
         return f"CUDA ({torch.cuda.get_device_name(0)})"
