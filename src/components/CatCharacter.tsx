@@ -161,6 +161,7 @@ export default function CatCharacter() {
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
+        onMouseDown={(e) => e.stopPropagation()}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         className={wrapperClasses}
@@ -170,6 +171,7 @@ export default function CatCharacter() {
           height: 160,
           position: "relative",
           transition: "filter 0.3s ease",
+          overflow: "visible",
         }}
         title={tooltip}
       >

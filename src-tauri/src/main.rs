@@ -320,8 +320,8 @@ fn handle_system_tray_event(app: &AppHandle, event: SystemTrayEvent) {
                             WindowUrl::App("index.html".into()),
                         )
                         .title("Neko TTS — Settings")
-                        .inner_size(520.0, 560.0)
-                        .min_inner_size(420.0, 480.0)
+                        .inner_size(640.0, 720.0)
+                        .min_inner_size(520.0, 600.0)
                         .resizable(true)
                         .decorations(true)
                         .always_on_top(false)
