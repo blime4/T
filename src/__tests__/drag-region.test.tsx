@@ -60,4 +60,18 @@ describe("Issue 4: Drag region limited to cat body", () => {
     const fullDragOverlay = document.querySelector(".app-root > .drag-region");
     expect(fullDragOverlay).toBeNull();
   });
+
+  it("should have data-tauri-drag-region on app-root for full-window dragging", () => {
+    render(<App />);
+    const appRoot = document.querySelector(".app-root");
+    expect(appRoot).not.toBeNull();
+    expect(appRoot!.hasAttribute("data-tauri-drag-region")).toBe(true);
+  });
+
+  it("should have data-tauri-drag-region on bubble-area so empty space is draggable", () => {
+    render(<App />);
+    const bubbleArea = document.querySelector(".bubble-area");
+    expect(bubbleArea).not.toBeNull();
+    expect(bubbleArea!.hasAttribute("data-tauri-drag-region")).toBe(true);
+  });
 });

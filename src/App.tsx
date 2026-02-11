@@ -87,9 +87,9 @@ export default function App() {
   }, [toggleInput, speak, setShowInput]);
 
   return (
-    <div className="app-root">
+    <div className="app-root" data-tauri-drag-region>
       {/* Bubbles container — positioned above the cat */}
-      <div className="bubble-area">
+      <div className="bubble-area" data-tauri-drag-region>
         {showInput && !showSpeech && <InputBubble />}
         {showSpeech && <SpeechBubble />}
       </div>
