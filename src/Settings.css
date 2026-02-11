@@ -76,7 +76,8 @@
   padding: 24px;
   box-sizing: border-box;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .settings-root::before {
