@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
+mod server;
 mod tts;
 
 use arboard::Clipboard;
@@ -15,10 +16,13 @@ use tauri::{
 use tokio::sync::Mutex;
 use tts::{EngineType, TtsConfig, TtsManager, TtsRequest, VoiceInfo};
 
+use server::ServerProcess;
+
 /// Shared app state — wraps TtsManager in a tokio Mutex for async access.
 pub struct AppState {
     tts_manager: Mutex<TtsManager>,
     clipboard_monitor_enabled: Arc<AtomicBool>,
+    server: Mutex<ServerProcess>,
 }
 
 // SAFETY: TtsManager fields are all Send+Sync (see previous comments)
@@ -127,29 +131,68 @@ async fn toggle_clipboard_monitor(state: State<'_, AppState>) -> Result<bool, St
 }
 
 #[tauri::command]
-async fn open_studio(app_handle: AppHandle) -> Result<(), String> {
+async fn open_studio(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     // If studio window already exists, just show & focus it
     if let Some(window) = app_handle.get_window("studio") {
         let _ = window.show();
         let _ = window.set_focus();
-    } else {
-        // Create a new studio window
-        let _window = WindowBuilder::new(
-            &app_handle,
-            "studio",
-            WindowUrl::App("index.html".into()),
-        )
-        .title("Neko TTS — Studio")
-        .inner_size(1200.0, 800.0)
-        .min_inner_size(900.0, 600.0)
-        .resizable(true)
-        .decorations(false)
-        .always_on_top(false)
-        .center()
-        .build()
-        .map_err(|e| e.to_string())?;
+        return Ok(());
     }
+
+    // Ensure voicebox-server is running before opening studio
+    {
+        let mut srv = state.server.lock().await;
+        if !srv.is_running() {
+            // Quick check: maybe an external instance is already up
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(2))
+                .build()
+                .map_err(|e| e.to_string())?;
+            let health_url = format!("{}/health", srv.server_url());
+            let already_up = client.get(&health_url).send().await.is_ok();
+
+            if !already_up {
+                srv.start().await.map_err(|e| format!("Failed to start server: {}", e))?;
+            }
+        }
+        // Wait for server to be ready
+        srv.health_check()
+            .await
+            .map_err(|e| format!("Server health check failed: {}", e))?;
+    }
+
+    // Create the studio window
+    let _window = WindowBuilder::new(
+        &app_handle,
+        "studio",
+        WindowUrl::App("index.html".into()),
+    )
+    .title("Neko TTS — Studio")
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(900.0, 600.0)
+    .resizable(true)
+    .decorations(false)
+    .always_on_top(false)
+    .center()
+    .build()
+    .map_err(|e| e.to_string())?;
+
     Ok(())
+}
+
+#[tauri::command]
+async fn shutdown_server(state: State<'_, AppState>) -> Result<(), String> {
+    let mut srv = state.server.lock().await;
+    srv.stop().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_server_url(state: State<'_, AppState>) -> Result<String, String> {
+    let srv = state.server.lock().await;
+    Ok(srv.server_url().to_string())
 }
 
 // ─── System Tray ──────────────────────────────────────────────────
@@ -247,6 +290,14 @@ fn handle_system_tray_event(app: &AppHandle, event: SystemTrayEvent) {
                     }
                 }
                 "quit" => {
+                    // Shutdown voicebox-server before quitting
+                    let app_clone = app.clone();
+                    tauri::async_runtime::block_on(async {
+                        if let Some(state) = app_clone.try_state::<AppState>() {
+                            let mut srv = state.server.lock().await;
+                            let _ = srv.stop().await;
+                        }
+                    });
                     app.exit(0);
                 }
                 _ => {}
@@ -343,6 +394,7 @@ fn main() {
     let app_state = AppState {
         tts_manager: Mutex::new(tts_manager),
         clipboard_monitor_enabled: clipboard_monitor_enabled.clone(),
+        server: Mutex::new(ServerProcess::new()),
     };
 
     let system_tray = create_system_tray();
@@ -364,10 +416,24 @@ fn main() {
         })
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
-                // Only hide the main cat window; let other windows (settings) close normally
-                if event.window().label() == "cat" {
-                    event.window().hide().unwrap();
-                    api.prevent_close();
+                let label = event.window().label().to_string();
+                match label.as_str() {
+                    // Hide the main cat window instead of closing
+                    "cat" => {
+                        event.window().hide().unwrap();
+                        api.prevent_close();
+                    }
+                    // When studio closes, shutdown the voicebox-server
+                    "studio" => {
+                        let app_handle = event.window().app_handle();
+                        tauri::async_runtime::spawn(async move {
+                            if let Some(state) = app_handle.try_state::<AppState>() {
+                                let mut srv = state.server.lock().await;
+                                let _ = srv.stop().await;
+                            }
+                        });
+                    }
+                    _ => {}
                 }
             }
         })
@@ -383,6 +449,8 @@ fn main() {
             update_tts_config,
             toggle_clipboard_monitor,
             open_studio,
+            shutdown_server,
+            get_server_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
